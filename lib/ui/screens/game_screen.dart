@@ -1,10 +1,9 @@
-import 'package:conecta4_game/services/audio_service.dart';
 import 'package:flutter/material.dart';
 import '../../models/difficulty.dart';
 import '../../models/game_status.dart';
 import '../../state/game_controller.dart';
 import '../widgets/board_widget.dart';
-import '../widgets/game_over_dialog.dart';
+import '../../services/audio_service.dart';
 
 class GameScreen extends StatefulWidget {
   final Difficulty difficulty;
@@ -17,191 +16,205 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   late GameController _controller;
-  bool _dialogShown = false;
 
   @override
   void initState() {
     super.initState();
     _controller = GameController(difficulty: widget.difficulty);
-    _controller.addListener(_handleGameStatusChange);
+    _controller.addListener(_onControllerUpdate);
+  }
+
+  void _onControllerUpdate() {
+    setState(() {});
+
+    // Mostrar diálogo cuando la partida termine oficialmente tras la pausa
+    if (_controller.isGameOver && mounted) {
+      _showGameOverDialog();
+    }
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_handleGameStatusChange);
+    _controller.removeListener(_onControllerUpdate);
     _controller.dispose();
     super.dispose();
   }
 
-  void _handleGameStatusChange() {
-    if (!mounted) return;
+  void _showGameOverDialog() {
+    String title;
+    String message;
+    Color titleColor;
 
-    // Detectar fin de partida para mostrar modal solo una vez
-    if ((_controller.status == GameStatus.humanWon ||
-            _controller.status == GameStatus.aiWon ||
-            _controller.status == GameStatus.draw) &&
-        !_dialogShown) {
-      _dialogShown = true;
-      Future.delayed(const Duration(milliseconds: 350), () {
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => GameOverDialog(
-            status: _controller.status,
-            onRestart: () {
-              Navigator.pop(context);
-              _dialogShown = false;
+    if (_controller.status == GameStatus.humanWon) {
+      title = '¡Victoria!';
+      message = '¡Has conectado 4 en línea y vencido a la IA!';
+      titleColor = Colors.greenAccent;
+    } else if (_controller.status == GameStatus.aiWon) {
+      title = 'Derrota';
+      message = 'La Inteligencia Artificial ha conectado 4 en línea.';
+      titleColor = Colors.redAccent;
+    } else {
+      title = 'Empate';
+      message = 'El tablero se ha llenado sin ganador.';
+      titleColor = Colors.amberAccent;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E2640),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          title,
+          style: TextStyle(color: titleColor, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white70),
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.spaceEvenly,
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context); // Volver al menú
+              AudioService.playBgm(forceRestart: true);
+            },
+            child: const Text('Menú', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+            onPressed: () {
+              Navigator.pop(ctx);
               _controller.resetGame();
+              AudioService.playBgm(forceRestart: true);
             },
-            onMenu: () {
-              Navigator.pop(context);
-              Navigator.pop(context); // Vuelve a MenuScreen
-            },
+            child: const Text('Revancha', style: TextStyle(color: Colors.white)),
           ),
-        );
-      });
-    }
-  }
-
-  String _getDifficultyText(Difficulty diff) {
-    switch (diff) {
-      case Difficulty.easy:
-        return "Fácil";
-      case Difficulty.medium:
-        return "Medio";
-      case Difficulty.hard:
-        return "Difícil";
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return Scaffold(
-          backgroundColor: Colors.blueGrey.shade900,
-          appBar: AppBar(
-            backgroundColor: Colors.blueGrey.shade800,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-            title: Text(
-              "Nivel: ${_getDifficultyText(_controller.difficulty)}",
-              style: const TextStyle(color: Colors.white, fontSize: 18),
-            ),
-            centerTitle: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.white),
-                tooltip: "Reiniciar partida",
-                onPressed: () {
-                  _dialogShown = false;
-                  _controller.resetGame();
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.volume_up, color: Colors.white),
-                onPressed: () {
-                  AudioService.toggleMute();
-                },
-              ),
-            ],
-          ),
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // 1. Indicador de Turno y Estado
-                  _buildTurnIndicator(),
-
-                  // 2. Tablero de Juego (6x7)
-                  BoardWidget(
-                    board: _controller.board,
-                    onColumnSelected: (colIndex) {
-                      _controller.playHumanMove(colIndex);
-                    },
-                  ),
-
-                  // 3. Leyenda y Mensajes de Advertencia/Error
-                  _buildFooterInfo(),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTurnIndicator() {
-    bool isHuman = _controller.status == GameStatus.humanTurn;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircleAvatar(
-            radius: 10,
-            backgroundColor: isHuman ? Colors.redAccent : Colors.amber,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            isHuman ? "Tu Turno (Rojo)" : "Turno de la IA (Amarillo)...",
-            style: TextStyle(
-              color: isHuman ? Colors.white : Colors.amberAccent,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (!isHuman) ...[
-            const SizedBox(width: 12),
-            const SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.amber,
-              ),
-            ),
-          ]
         ],
       ),
     );
   }
 
-  Widget _buildFooterInfo() {
-    return Column(
-      children: [
-        if (_controller.errorMessage != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.red.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.redAccent.withOpacity(0.5)),
+  String _getStatusText() {
+    switch (_controller.status) {
+      case GameStatus.humanWon:
+        return '¡Has ganado!';
+      case GameStatus.aiWon:
+        return 'La IA ha ganado';
+      case GameStatus.draw:
+        return '¡Empate!';
+      case GameStatus.aiTurn:
+        return 'IA pensando...';
+      case GameStatus.humanTurn:
+        return 'Tu turno';
+    }
+  }
+
+  Color _getStatusColor() {
+    switch (_controller.status) {
+      case GameStatus.humanWon:
+        return Colors.greenAccent;
+      case GameStatus.aiWon:
+        return Colors.redAccent;
+      case GameStatus.draw:
+        return Colors.amberAccent;
+      case GameStatus.humanTurn:
+        return Colors.redAccent;
+      case GameStatus.aiTurn:
+        return Colors.amber;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F1423),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Dificultad: ${widget.difficulty.name.toUpperCase()}',
+          style: const TextStyle(fontSize: 16, letterSpacing: 1.2),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(
+              AudioService.isMuted ? Icons.volume_off : Icons.volume_up,
+              color: Colors.white70,
             ),
-            child: Text(
-              _controller.errorMessage!,
-              style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-            ),
-          )
-        else
-          const Text(
-            "Toca cualquier columna para soltar tu ficha",
-            style: TextStyle(color: Colors.white54, fontSize: 13),
+            onPressed: () {
+              setState(() {
+                AudioService.toggleMute();
+              });
+            },
           ),
-        const SizedBox(height: 12),
-      ],
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white70),
+            onPressed: () => _controller.resetGame(),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 10),
+
+            // Indicador de turno / estado
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E2640),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _getStatusColor().withOpacity(0.5),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _getStatusColor(),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _getStatusText(),
+                    style: TextStyle(
+                      color: _getStatusColor(),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Spacer(),
+
+            // Tablero con la animación de caída y la línea de 4 conectadas
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: BoardWidget(
+                board: _controller.board,
+                winningCoords: _controller.winningCoords,
+                onColumnSelected: (col) => _controller.handleUserTurn(col),
+              ),
+            ),
+
+            const Spacer(),
+          ],
+        ),
+      ),
     );
   }
 }

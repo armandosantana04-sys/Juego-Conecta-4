@@ -18,7 +18,7 @@ class CellWidget extends StatelessWidget {
       child: AspectRatio(
         aspectRatio: 1.0,
         child: Container(
-          margin: const EdgeInsets.all(3.0),
+          margin: const EdgeInsets.all(4.0),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: RadialGradient(
@@ -27,12 +27,12 @@ class CellWidget extends StatelessWidget {
               colors: [
                 pieceColor.withOpacity(0.9),
                 pieceColor,
-                Colors.black.withOpacity(0.35),
+                Colors.black.withOpacity(0.4),
               ],
             ),
             boxShadow: const [
               BoxShadow(
-                color: Colors.black38,
+                color: Colors.black45,
                 blurRadius: 4,
                 offset: Offset(0, 2),
               ),

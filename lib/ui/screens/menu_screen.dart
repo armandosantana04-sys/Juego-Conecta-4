@@ -29,7 +29,7 @@ class _MenuScreenState extends State<MenuScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo o Título
+              // Logo y Título
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -117,12 +117,14 @@ class _MenuScreenState extends State<MenuScreen> {
                     elevation: 5,
                   ),
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => GameScreen(difficulty: _selectedDifficulty),
-                      ),
-                    );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => GameScreen(difficulty: _selectedDifficulty),
+                    ),
+                  ).then((_) {
+                    AudioService.playBgm();
+                  });
                   },
                   child: const Text(
                     "INICIAR PARTIDA",

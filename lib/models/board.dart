@@ -108,4 +108,78 @@ class Board {
   bool isFull() {
     return getValidMoves().isEmpty;
   }
+
+  // Devuelve la lista de las 4 coordenadas [[fila, col], ...] que causaron la victoria
+  List<List<int>>? getWinningLine(int player) {
+    // 1. Horizontal
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c <= cols - 4; c++) {
+        if (grid[r][c] == player &&
+            grid[r][c + 1] == player &&
+            grid[r][c + 2] == player &&
+            grid[r][c + 3] == player) {
+          return [
+            [r, c],
+            [r, c + 1],
+            [r, c + 2],
+            [r, c + 3]
+          ];
+        }
+      }
+    }
+
+    // 2. Vertical
+    for (int r = 0; r <= rows - 4; r++) {
+      for (int c = 0; c < cols; c++) {
+        if (grid[r][c] == player &&
+            grid[r + 1][c] == player &&
+            grid[r + 2][c] == player &&
+            grid[r + 3][c] == player) {
+          return [
+            [r, c],
+            [r + 1, c],
+            [r + 2, c],
+            [r + 3, c]
+          ];
+        }
+      }
+    }
+
+    // 3. Diagonal Positiva (subiendo: /)
+    for (int r = 3; r < rows; r++) {
+      for (int c = 0; c <= cols - 4; c++) {
+        if (grid[r][c] == player &&
+            grid[r - 1][c + 1] == player &&
+            grid[r - 2][c + 2] == player &&
+            grid[r - 3][c + 3] == player) {
+          return [
+            [r, c],
+            [r - 1, c + 1],
+            [r - 2, c + 2],
+            [r - 3, c + 3]
+          ];
+        }
+      }
+    }
+
+    // 4. Diagonal Negativa (bajando: \)
+    for (int r = 0; r <= rows - 4; r++) {
+      for (int c = 0; c <= cols - 4; c++) {
+        if (grid[r][c] == player &&
+            grid[r + 1][c + 1] == player &&
+            grid[r + 2][c + 2] == player &&
+            grid[r + 3][c + 3] == player) {
+          return [
+            [r, c],
+            [r + 1, c + 1],
+            [r + 2, c + 2],
+            [r + 3, c + 3]
+          ];
+        }
+      }
+    }
+
+    return null;
+  }
+
 }
