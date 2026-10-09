@@ -171,7 +171,7 @@ class _GameScreenState extends State<GameScreen> {
                 color: const Color(0xFF1E2640),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: _getStatusColor().withOpacity(0.5),
+                  color: _getStatusColor().withValues(alpha: 0.5),
                   width: 1.5,
                 ),
               ),

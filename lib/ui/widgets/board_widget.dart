@@ -311,7 +311,7 @@ class _WinningLinePainter extends CustomPainter {
     );
 
     final glowPaint = Paint()
-      ..color = Colors.cyanAccent.withOpacity(0.7)
+      ..color = Colors.cyanAccent.withValues(alpha: 0.7)
       ..strokeWidth = 16.0
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke

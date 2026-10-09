@@ -25,9 +25,9 @@ class CellWidget extends StatelessWidget {
               center: const Alignment(-0.35, -0.35),
               radius: 0.8,
               colors: [
-                pieceColor.withOpacity(0.9),
+                pieceColor.withValues(alpha: 0.9),
                 pieceColor,
-                Colors.black.withOpacity(0.4),
+                Colors.black.withValues(alpha: 0.4),
               ],
             ),
             boxShadow: const [
